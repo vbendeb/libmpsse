@@ -79,7 +79,7 @@ class SPIFlash(object):
 	def ChipID(self):
 		self.flash.Start()
 		self.flash.Write(self.IDCMD)
-		chipid = self.flash.Read(self.IDLEN)
+		chipid = self.flash.Read(self.ID_LENGTH)
 		self.flash.Stop()
 		return chipid
 
