@@ -64,19 +64,19 @@ if __name__ == "__main__":
 
     def pin_mappings():
         print """
-           Common Pin Mappings for 8-pin SPI Flash Chips
---------------------------------------------------------------------
-| Description | SPI Flash Pin | FTDI Pin | C232HM Cable Color Code |
---------------------------------------------------------------------
-| CS          | 1             | ADBUS3   | Brown                   |
-| MISO        | 2             | ADBUS2   | Green                   |
-| WP          | 3             | ADBUS4   | Grey                    |
-| GND         | 4             | N/A      | Black                   |
-| MOSI        | 5             | ADBUS1   | Yellow                  |
-| CLK         | 6             | ADBUS0   | Orange                  |
-| HOLD        | 7             | ADBUS5   | Purple                  |
-| Vcc         | 8             | N/A      | Red                     |
---------------------------------------------------------------------
+           Pin mappings for raw SPI mode
+-----------------------------------------
+| Description | C232HM Cable Color Code |
+-----------------------------------------
+| CS          |        Brown            |
+| MISO        |        Green            |
+| WP          |        Grey             |
+| GND         |        Black            |
+| MOSI        |       Yellow            |
+| CLK         |       Orange            |
+| HOLD        |       Purple            |
+| Vcc         |         Red             |
+-----------------------------------------
 """
         sys.exit(0)
 
