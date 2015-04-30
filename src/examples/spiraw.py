@@ -133,18 +133,19 @@ if __name__ == "__main__":
             usage()
 
         if do_read:
-            if rname is None or not size:
+            if not rname or not size:
                 print "Please specify an output file and read size!"
+                usage()
+
+        if do_write:
+            if not wname:
+                print "Please specify an input file!"
                 usage()
 
         spi = SPIRaw(freq)
         print "%s initialized at %d hertz" % (spi.chip, spi.speed)
 
         if do_write:
-            if wname is None:
-                print "Please specify an input file!"
-                usage()
-
             data = open(wname, 'rb').read()
             sys.stdout.write("Writing %d bytes from %s to the chip..." %
                              (len(data), wname))
