@@ -30,6 +30,7 @@ class SPIRaw(object):
         self.speed = self.flash.GetClock()
         self._init_gpio()
         self.flash.Start()
+        self.write_reported = False
 
     def _init_gpio(self):
         # Set the GPIOL0 and GPIOL1 pins high for connection to SPI flash WP and HOLD pins.
@@ -49,13 +50,14 @@ class SPIRaw(object):
         return data
 
     def Write(self, data):
-        print 'data is', data
+        if not self.write_reported:
+            print 'data is', data
+            self.write_reported = True
         self.flash.Write(data)
 
     def Close(self):
         self.flash.Stop()
         self.flash.Close()
-
 
 if __name__ == "__main__":
 
@@ -88,8 +90,9 @@ if __name__ == "__main__":
         print "\t-w, --write=<file>     Write raw data from file to the bus"
         print "\t-s, --size=<int>       Set the size of raw data to read"
         print "\t-f, --frequency=<int>  Set the SPI clock frequency, in hertz [15,000,000]"
-        print "\t-p, --pin-mappings     Display a table of SPI flash to FTDI pin mappings"
+        print "\t-c, --clock            Just keep clocking the bus with CS asserted"
         print "\t-h, --help             Show help"
+        print "\t-p, --pin-mappings     Display a table of SPI flash to FTDI pin mappings"
         print ""
 
         sys.exit(1)
@@ -98,6 +101,7 @@ if __name__ == "__main__":
         freq = None
         do_read = False
         do_write = False
+        do_clock = False
         verify = False
         address = 0
         size = 0
@@ -105,9 +109,9 @@ if __name__ == "__main__":
 
         try:
             opts, args = GetOpt(sys.argv[1:],
-                                "f:s:r:w:ph",
+                                "f:s:r:w:chp",
                                 ["frequency=", "size=", "read=",
-                                 "write=", "pin-mappings", "help"])
+                                 "write=", "clock", "help", "pin-mappings"])
         except GetoptError, e:
             print e
             usage()
@@ -127,9 +131,15 @@ if __name__ == "__main__":
                 usage()
             elif opt in ('-p', '--pin-mappings'):
                 pin_mappings()
+            elif opt in ('-c', '--clock'):
+                do_clock = True
 
-        if not (do_read or do_write):
+        if not (do_read or do_write or do_clock):
             print "Please specify an action!"
+            usage()
+
+        if (do_read or do_write) and do_clock:
+            print "Constant clock can not be combined with read and/or write!"
             usage()
 
         if do_read:
@@ -144,6 +154,14 @@ if __name__ == "__main__":
 
         spi = SPIRaw(freq)
         print "%s initialized at %d hertz" % (spi.chip, spi.speed)
+
+        if do_clock:
+            try:
+                data = 'some random string to keep sending'
+                while True:
+                    spi.Write(data)
+            except KeyboardInterrupt:
+                pass
 
         if do_write:
             data = open(wname, 'rb').read()
