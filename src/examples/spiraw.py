@@ -19,13 +19,15 @@ class SPIRaw(object):
 
     BLOCK_SIZE = 256    # SPI block size, writes must be done in multiples of this size
 
-    def __init__(self, speed=FIFTEEN_MHZ):
+    def __init__(self, speed=FIFTEEN_MHZ, mode=0):
+
+        modes = [SPI0, SPI1, SPI2, SPI3]
 
         # Sanity check on the specified clock speed
         if not speed:
             speed = FIFTEEN_MHZ
 
-        self.flash = MPSSE(SPI0, speed, MSB)
+        self.flash = MPSSE(modes[mode], speed, MSB)
         self.chip = self.flash.GetDescription()
         self.speed = self.flash.GetClock()
         self._init_gpio()
@@ -86,10 +88,11 @@ if __name__ == "__main__":
         print ""
         print "Usage: %s [OPTIONS]" % sys.argv[0]
         print ""
-        print "\t-r, --read=<file>      Read raw data from the bus to file"
-        print "\t-w, --write=<file>     Write raw data from file to the bus"
-        print "\t-s, --size=<int>       Set the size of raw data to read"
         print "\t-f, --frequency=<int>  Set the SPI clock frequency, in hertz [15,000,000]"
+        print "\t-m, --mode=<int>       Set the SPI bus mode {[0], 1, 2, 3}"
+        print "\t-r, --read=<file>      Read raw data from the bus to file"
+        print "\t-s, --size=<int>       Set the size of raw data to read"
+        print "\t-w, --write=<file>     Write raw data from file to the bus"
         print "\t-c, --clock            Just keep clocking the bus with CS asserted"
         print "\t-h, --help             Show help"
         print "\t-p, --pin-mappings     Display a table of SPI flash to FTDI pin mappings"
@@ -106,11 +109,12 @@ if __name__ == "__main__":
         address = 0
         size = 0
         data = ""
+        mode = 0 # Default SPI operation mode
 
         try:
             opts, args = GetOpt(sys.argv[1:],
-                                "f:s:r:w:chp",
-                                ["frequency=", "size=", "read=",
+                                "f:m:r:s:w:chp",
+                                ["frequency=", "mode=", "read=", "size=",
                                  "write=", "clock", "help", "pin-mappings"])
         except GetoptError, e:
             print e
@@ -133,6 +137,13 @@ if __name__ == "__main__":
                 pin_mappings()
             elif opt in ('-c', '--clock'):
                 do_clock = True
+            elif opt in ('-m', '--mode'):
+                try:
+                    mode = int(arg)
+                except ValueError:
+                    usage()
+                if mode < 0 or mode > 3:
+                    usage()
 
         if not (do_read or do_write or do_clock):
             print "Please specify an action!"
@@ -152,16 +163,20 @@ if __name__ == "__main__":
                 print "Please specify an input file!"
                 usage()
 
-        spi = SPIRaw(freq)
+        spi = SPIRaw(freq, mode)
         print "%s initialized at %d hertz" % (spi.chip, spi.speed)
 
         if do_clock:
-            try:
-                data = 'some random string to keep sending'
-                while True:
-                    spi.Write(data)
-            except KeyboardInterrupt:
-                pass
+            if size:
+                spi.Write('U' * size)
+            else:
+                try:
+                    data = 'some random string to keep sending'
+                    while True:
+                        spi.Write(data)
+                except KeyboardInterrupt:
+                    pass
+            sys.exit(0)
 
         if do_write:
             data = open(wname, 'rb').read()
