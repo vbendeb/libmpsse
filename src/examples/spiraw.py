@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import random
 import sys
 
 MPSSE_MODULE = 'mpsse.py'
@@ -31,7 +32,6 @@ class SPIRaw(object):
         self.chip = self.flash.GetDescription()
         self.speed = self.flash.GetClock()
         self._init_gpio()
-        self.flash.Start()
         self.write_reported = False
 
     def _init_gpio(self):
@@ -47,14 +47,17 @@ class SPIRaw(object):
 
             return addr_str[::-1]
 
+    def Start(self):
+        self.flash.Start()
+
+    def Stop(self):
+        self.flash.Stop()
+
     def Read(self, count):
         data = self.flash.Read(count)
         return data
 
     def Write(self, data):
-        if not self.write_reported:
-            print 'data is', data
-            self.write_reported = True
         self.flash.Write(data)
 
     def Close(self):
@@ -65,6 +68,29 @@ if __name__ == "__main__":
 
     import sys
     from getopt import getopt as GetOpt, GetoptError
+
+    def do_n_loops(num_loops, spi):
+        deviation = 0
+        for _ in range(num_loops):
+            size = 10 + int(random.random() * 1000)
+            text = [size / 256, size % 256]
+            check = 255
+            for i in range(size - 1):
+                check ^= i
+                text.append(i)
+            text.append(check % 256)
+            spi.Start()
+            text = ''.join('%c' % (x % 256) for x in text)
+            spi.Write(text)
+            readback = spi.Read(size + 60)
+            spi.Stop()
+            read_index = readback.find(text[0:2])
+            readtext = readback[read_index:read_index + len(text)]
+            if readtext != text:
+                print 'Mismatch!', read_index
+                for s in (text, readtext, readback):
+                    print ' '.join(' %2.2x' % ord(x) for x in s)
+                    print
 
     def pin_mappings():
         print """
@@ -89,6 +115,7 @@ if __name__ == "__main__":
         print "Usage: %s [OPTIONS]" % sys.argv[0]
         print ""
         print "\t-f, --frequency=<int>  Set the SPI clock frequency, in hertz [15,000,000]"
+        print "\t-m, --loop=<int>       Send N random size packets and verify they are sent back"
         print "\t-m, --mode=<int>       Set the SPI bus mode {[0], 1, 2, 3}"
         print "\t-r, --read=<file>      Read raw data from the bus to file"
         print "\t-s, --size=<int>       Set the size of raw data to read"
@@ -105,6 +132,7 @@ if __name__ == "__main__":
         do_read = False
         do_write = False
         do_clock = False
+        num_loops = 0
         verify = False
         address = 0
         size = 0
@@ -112,45 +140,51 @@ if __name__ == "__main__":
         mode = 0 # Default SPI operation mode
 
         try:
-            opts, args = GetOpt(sys.argv[1:],
-                                "f:m:r:s:w:chp",
-                                ["frequency=", "mode=", "read=", "size=",
-                                 "write=", "clock", "help", "pin-mappings"])
+            opts, args = GetOpt(sys.argv[1:], "f:l:m:r:s:w:chp",
+                ["frequency=", "loop=", "mode=", "read=", "size=", "write=",
+                "clock", "help", "pin-mappings"])
         except GetoptError, e:
             print e
             usage()
 
-        for opt, arg in opts:
-            if opt in ('-f', '--frequency'):
-                freq = int(arg)
-            elif opt in ('-s', '--size'):
-                size = int(arg)
-            elif opt in ('-r', '--read'):
-                do_read = True
-                rname = arg
-            elif opt in ('-w', '--write'):
-                do_write = True
-                wname = arg
-            elif opt in ('-h', '--help'):
-                usage()
-            elif opt in ('-p', '--pin-mappings'):
-                pin_mappings()
-            elif opt in ('-c', '--clock'):
-                do_clock = True
-            elif opt in ('-m', '--mode'):
-                try:
+        try:
+            for opt, arg in opts:
+                if opt in ('-f', '--frequency'):
+                    freq = int(arg)
+                elif opt in ('-s', '--size'):
+                    size = int(arg)
+                elif opt in ('-r', '--read'):
+                    do_read = True
+                    rname = arg
+                elif opt in ('-w', '--write'):
+                    do_write = True
+                    wname = arg
+                elif opt in ('-h', '--help'):
+                    usage()
+                elif opt in ('-p', '--pin-mappings'):
+                    pin_mappings()
+                elif opt in ('-c', '--clock'):
+                    do_clock = True
+                elif opt in ('-l', '--loop'):
+                    num_loops = int(arg)
+                elif opt in ('-m', '--mode'):
                     mode = int(arg)
-                except ValueError:
-                    usage()
-                if mode < 0 or mode > 3:
-                    usage()
+        except ValueError:
+            usage()
 
-        if not (do_read or do_write or do_clock):
+        if mode < 0 or mode > 3:
+            usage()
+
+        if not (do_read or do_write or do_clock or num_loops):
             print "Please specify an action!"
             usage()
 
-        if (do_read or do_write) and do_clock:
+        if (do_read or do_write or num_loops) and do_clock:
             print "Constant clock can not be combined with read and/or write!"
+            usage()
+
+        if ((do_read or do_write) and num_loops):
+            print "Loops can not be combined with read or write"
             usage()
 
         if do_read:
@@ -166,6 +200,10 @@ if __name__ == "__main__":
         spi = SPIRaw(freq, mode)
         print "%s initialized at %d hertz" % (spi.chip, spi.speed)
 
+        if (num_loops):
+            do_n_loops(num_loops, spi)
+
+        spi.Start()
         if do_clock:
             if size:
                 spi.Write('U' * size)
