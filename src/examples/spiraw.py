@@ -20,7 +20,7 @@ class SPIRaw(object):
 
     BLOCK_SIZE = 256    # SPI block size, writes must be done in multiples of this size
 
-    def __init__(self, speed=FIFTEEN_MHZ, mode=0):
+    def __init__(self, speed=FIFTEEN_MHZ, mode=0, serial_number=None):
 
         modes = [SPI0, SPI1, SPI2, SPI3]
 
@@ -28,7 +28,7 @@ class SPIRaw(object):
         if not speed:
             speed = FIFTEEN_MHZ
 
-        self.flash = MPSSE(modes[mode], speed, MSB)
+        self.flash = MPSSE(modes[mode], speed, MSB, serial_number)
         self.chip = self.flash.GetDescription()
         self.speed = self.flash.GetClock()
         self._init_gpio()
@@ -115,8 +115,9 @@ if __name__ == "__main__":
         print "Usage: %s [OPTIONS]" % sys.argv[0]
         print ""
         print "\t-f, --frequency=<int>  Set the SPI clock frequency, in hertz [15,000,000]"
-        print "\t-m, --loop=<int>       Send N random size packets and verify they are sent back"
+        print "\t-l, --loop=<int>       Send N random size packets and verify they are sent back"
         print "\t-m, --mode=<int>       Set the SPI bus mode {[0], 1, 2, 3}"
+        print "\t-n, --snum=<int>       Use the dongle with this serial number"
         print "\t-r, --read=<file>      Read raw data from the bus to file"
         print "\t-s, --size=<int>       Set the size of raw data to read"
         print "\t-w, --write=<file>     Write raw data from file to the bus"
@@ -138,11 +139,12 @@ if __name__ == "__main__":
         size = 0
         data = ""
         mode = 0 # Default SPI operation mode
+        serial_number = None
 
         try:
-            opts, args = GetOpt(sys.argv[1:], "f:l:m:r:s:w:chp",
-                ["frequency=", "loop=", "mode=", "read=", "size=", "write=",
-                "clock", "help", "pin-mappings"])
+            opts, args = GetOpt(sys.argv[1:], "f:l:m:n:r:s:w:chp",
+                ["frequency=", "loop=", "mode=", "snum=", "read=", "size=",
+                 "write=", "clock", "help", "pin-mappings"])
         except GetoptError, e:
             print e
             usage()
@@ -169,6 +171,8 @@ if __name__ == "__main__":
                     num_loops = int(arg)
                 elif opt in ('-m', '--mode'):
                     mode = int(arg)
+                elif opt in ('-n', '--snam'):
+                    serial_number = arg
         except ValueError:
             usage()
 
@@ -197,7 +201,7 @@ if __name__ == "__main__":
                 print "Please specify an input file!"
                 usage()
 
-        spi = SPIRaw(freq, mode)
+        spi = SPIRaw(freq, mode, serial_number)
         print "%s initialized at %d hertz" % (spi.chip, spi.speed)
 
         if (num_loops):
