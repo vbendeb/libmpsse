@@ -1,0 +1,14 @@
+src/.gitignore
+src/_pylibmpsse.so
+src/config.h
+src/config.log
+src/fast.o
+src/libmpsse.a
+src/libmpsse.so
+src/mpsse.o
+src/mpsse.pyc
+src/mpsse_wrap.c
+src/mpsse_wrap.o
+src/pylibmpsse.py
+src/pylibmpsse.pyc
+src/support.o
