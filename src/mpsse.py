@@ -52,7 +52,7 @@ class MPSSE(object):
 	Python class wrapper for libmpsse.
 	"""
 
-	def __init__(self, mode=None, frequency=ONE_HUNDRED_KHZ, endianess=MSB):
+	def __init__(self, mode=None, frequency=ONE_HUNDRED_KHZ, endianess=MSB, serial_number=None):
 		"""
 		Class constructor.
 
@@ -65,7 +65,7 @@ class MPSSE(object):
 		"""
 		self.context = None
 		if mode is not None:
-			self.context = _mpsse.MPSSE(mode, frequency, endianess)
+			self.context = _mpsse.MPSSE(mode, frequency, endianess, serial_number)
 			if self.context.open == 0:
 				raise Exception, self.ErrorString()
 

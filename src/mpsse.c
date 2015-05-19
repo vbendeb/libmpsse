@@ -44,19 +44,20 @@ struct vid_pid supported_devices[] = {
  * @mode      - Mode to open the device in. One of enum modes.
  * @freq      - Clock frequency to use for the specified mode.
  * @endianess - Specifies how data is clocked in/out (MSB, LSB).
+ * @serial    - Serial number of the USB device (NULL if not needed).
  *
  * Returns a pointer to an MPSSE context structure. 
  * On success, mpsse->open will be set to 1.
  * On failure, mpsse->open will be set to 0.
  */
-struct mpsse_context *MPSSE(enum modes mode, int freq, int endianess)
+struct mpsse_context *MPSSE(enum modes mode, int freq, int endianess, const char* serial)
 {
 	int i = 0;
 	struct mpsse_context *mpsse = NULL;
 
 	for(i=0; supported_devices[i].vid != 0; i++)
 	{
-		if((mpsse = Open(supported_devices[i].vid, supported_devices[i].pid, mode, freq, endianess, IFACE_A, NULL, NULL)) != NULL)
+		if((mpsse = Open(supported_devices[i].vid, supported_devices[i].pid, mode, freq, endianess, IFACE_A, NULL, serial)) != NULL)
 		{
 			if(mpsse->open)
 			{
